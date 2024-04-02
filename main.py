@@ -93,8 +93,10 @@ search_question_chain=Search_prompt|ChatGoogleGenerativeAI(model="gemini-pro")|S
 #     }
 # )
 scrape_and_summarize_chain= RunnablePassthrough.assign(
+summary=RunnablePassthrough.assign(
     text=lambda x:scrape_text(x["url"])[:10000]
 ) |Summary_prompt|ChatGoogleGenerativeAI(model="gemini-pro")|StrOutputParser()
+)|(lambda x:f"URL:{x['url']}\n\nSummary:{x['summary']}")
 
 
 web_search_chain=RunnablePassthrough.assign(
@@ -106,8 +108,6 @@ full_research_chain=search_question_chain|( lambda x:[{"question":q} for q in x]
 
 WRITER_SYSTEM_PROMPT = "You are an AI critical thinker research assistant. Your sole purpose is to write well written, critically acclaimed, objective and structured reports on given text."  # noqa: E501
 
-
-# Report prompts from https://github.com/assafelovic/gpt-researcher/blob/master/gpt_researcher/master/prompts.py
 RESEARCH_REPORT_TEMPLATE = """Information:
 --------
 {research_summary}
@@ -142,7 +142,7 @@ chain=RunnablePassthrough.assign(
 
 output=chain.invoke(
     {
-        "question":"bubble diagram for architectural floor plans using neural networks",
+        "question":"Bubble Diagram generation for architectural floor plans using neural networks",
     }
 )
 
