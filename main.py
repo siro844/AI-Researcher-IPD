@@ -8,7 +8,8 @@ import os
 from langchain.schema.runnable import RunnablePassthrough,RunnableLambda
 from langchain.utilities import DuckDuckGoSearchAPIWrapper
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+from fastapi import FastAPI
+from langserve import add_routes
 import json
 
 load_dotenv()
@@ -92,11 +93,12 @@ search_question_chain=Search_prompt|ChatGoogleGenerativeAI(model="gemini-pro")|S
 #         "question":"What is difference between langsmith and langchain?",
 #     }
 # )
-scrape_and_summarize_chain= RunnablePassthrough.assign(
-summary=RunnablePassthrough.assign(
-    text=lambda x:scrape_text(x["url"])[:10000]
-) |Summary_prompt|ChatGoogleGenerativeAI(model="gemini-pro")|StrOutputParser()
-)|(lambda x:f"URL:{x['url']}\n\nSummary:{x['summary']}")
+
+scrape_and_summarize_chain = RunnablePassthrough.assign(
+    summary = RunnablePassthrough.assign(
+    text=lambda x: scrape_text(x["url"])[:10000]
+) | Summary_prompt | ChatGoogleGenerativeAI(model="gemini-pro") | StrOutputParser()
+) | (lambda x: f"URL: {x['url']}\n\nSUMMARY: {x['summary']}")
 
 
 web_search_chain=RunnablePassthrough.assign(
@@ -140,10 +142,29 @@ chain=RunnablePassthrough.assign(
     research_summary=full_research_chain|collapse_list_of_lists
 )|prompt|ChatGoogleGenerativeAI(model="gemini-pro",convert_system_message_to_human=True)|StrOutputParser()
 
-output=chain.invoke(
-    {
-        "question":"Bubble Diagram generation for architectural floor plans using neural networks",
-    }
+
+
+
+
+app = FastAPI(
+    title="LangChain Server",
+    version="1.0",
+    description="A simple api server using Langchain's Runnable interfaces",
 )
+
+add_routes(
+    app,
+    chain,
+    path="/research-assistant",
+)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="localhost", port=8000)
+
+
+
 
 

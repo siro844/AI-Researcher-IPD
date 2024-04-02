@@ -3,3 +3,6 @@ openai
 duckduckgo-search
 requests
 beautifulsoup
+langserve
+fastapi
+sse_starlette
