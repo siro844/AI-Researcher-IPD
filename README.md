@@ -39,7 +39,7 @@ This research assistant, powered by LangChain and LangServe, streamlines researc
 
 1. Run the main script: `python main.py`
 2. Open your web browser and navigate to: `http://localhost:8000/research-assistant/playground/`
-3. Conduct your research :).
+3. Conduct your research.
 
 
 ## Features
