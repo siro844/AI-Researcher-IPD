@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 import os
 from langchain.schema.runnable import RunnablePassthrough,RunnableLambda
 from langchain.utilities import DuckDuckGoSearchAPIWrapper
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+import json
 
 load_dotenv()
 os.environ["LANGCHAIN_TRACING_V2"]="true"
@@ -41,6 +44,20 @@ If the question cannot be answered by the text ,simply summarize the text.Includ
 """
 
 
+
+Search_prompt=ChatPromptTemplate.from_messages(
+    [
+        (
+            "user",
+            "Write 3 google search queries to searh online that form an"
+            "objective opinion from the following :{question}\n"
+            "You must respond with a list of strings in the following format:"
+            '["query1","query2","query3"]',
+        ),
+    ]
+)
+
+
 Summary_prompt=ChatPromptTemplate.from_template(
     template=SUMMARY_TEMPLATE
 )
@@ -66,19 +83,29 @@ def scrape_text(website:str):
         print(e)
         return "Failed with exception:{e}"
 
+
+
+search_question_chain=Search_prompt|ChatGoogleGenerativeAI(model="gemini-pro")|StrOutputParser()|json.loads
+
+# search_question_chain.invoke(
+#     {
+#         "question":"What is difference between langsmith and langchain?",
+#     }
+# )
 scrape_and_summarize_chain= RunnablePassthrough.assign(
     text=lambda x:scrape_text(x["url"])[:10000]
-) |Summary_prompt|ChatOpenAI(model='gpt-3.5-turbo-1106')|StrOutputParser()
+) |Summary_prompt|ChatGoogleGenerativeAI(model="gemini-pro")|StrOutputParser()
 
 
-chain=RunnablePassthrough.assign(
+web_search_chain=RunnablePassthrough.assign(
     urls=lambda x :web_search(x["question"])
     )| (lambda x:[{"question":x["question"],"url":u} for u in x["urls"]]) | scrape_and_summarize_chain.map()
 
+chain=search_question_chain|( lambda x:[{"question":q} for q in x])|web_search_chain.map()
 
 output=chain.invoke(
     {
-        "question":"what is langsmith",
+        "question":"what is difference between langsmith and langchain?",
     }
 )
 
